@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Parents App",
+    "slug": "parents-app-ios",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.parentsapp.ios",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "This app uses Bluetooth to pair with your child's AI Toy device.",
+        "NSBluetoothPeripheralUsageDescription": "This app uses Bluetooth to communicate with your child's AI Toy.",
+        "NSLocalNetworkUsageDescription": "This app uses local network to discover AI Toy devices.",
+        "NSCameraUsageDescription": "This app uses the camera to scan QR codes for device pairing.",
+        "NSPhotoLibraryAddUsageDescription": "This app saves exported data to your photo library."
+      }
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [],
+          "bluetoothAlwaysPermission": "Allow Parents App to connect to your AI Toy"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
