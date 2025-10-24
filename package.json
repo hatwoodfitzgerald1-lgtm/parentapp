@@ -1,0 +1,32 @@
+{
+  "name": "parents-app-ios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Parents App for AI Toy - iOS Mobile + Cloud API + Toy Simulator",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run prisma:generate",
+    "prisma:generate": "prisma generate --schema=./apps/server/prisma/schema.prisma",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:simulator\" --names \"SERVER,SIMULATOR\" --prefix-colors \"blue,green\"",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:simulator": "npm run start --workspace=packages/toy-simulator",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "seed": "npm run seed --workspace=apps/server",
+    "migrate": "prisma migrate dev --schema=./apps/server/prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "concurrently": "^8.2.2",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

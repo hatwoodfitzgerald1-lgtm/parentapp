@@ -1,0 +1,192 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  PARENT
+}
+
+enum ChatRole {
+  CHILD
+  ASSISTANT
+  PARENT
+  SYSTEM
+}
+
+enum CoachRole {
+  PARENT
+  ASSISTANT
+  SYSTEM
+}
+
+enum HighlightCategory {
+  Curiosity
+  Creativity
+  SocialSkills
+  Emotions
+  Learning
+  Other
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  passwordHash   String
+  role           Role            @default(PARENT)
+  firstName      String
+  lastName       String
+  createdAt      DateTime        @default(now())
+  children       ParentChild[]
+  coachSessions  ParentChatSession[]
+  devices        Device[]
+}
+
+model Child {
+  id                String              @id @default(cuid())
+  firstName         String
+  lastName          String
+  birthday          DateTime?
+  className         String?
+  photoUrl          String?
+  parents           ParentChild[]
+  createdAt         DateTime            @default(now())
+  policy            SafetyPolicy?
+  chatSessions      ChildChatSession[]
+  highlights        Highlight[]
+  scheduleRules     ScheduleRule[]
+  devices           Device[]
+}
+
+model ParentChild {
+  parentId String
+  childId  String
+  parent   User   @relation(fields: [parentId], references: [id])
+  child    Child  @relation(fields: [childId], references: [id])
+
+  @@id([parentId, childId])
+}
+
+model ChildChatSession {
+  id        String             @id @default(cuid())
+  child     Child              @relation(fields: [childId], references: [id])
+  childId   String
+  source    String?
+  deviceId  String?
+  startedAt DateTime           @default(now())
+  messages  ChildChatMessage[]
+
+  @@index([childId, startedAt])
+}
+
+model ChildChatMessage {
+  id         String           @id @default(cuid())
+  session    ChildChatSession @relation(fields: [sessionId], references: [id])
+  sessionId  String
+  role       ChatRole
+  content    String
+  createdAt  DateTime         @default(now())
+  tokens     Int?
+  topicTags  Json?
+  safetyHits Json?
+
+  @@index([sessionId, createdAt])
+}
+
+model Highlight {
+  id              String            @id @default(cuid())
+  child           Child             @relation(fields: [childId], references: [id])
+  childId         String
+  title           String
+  summary         String
+  category        HighlightCategory
+  occurredAt      DateTime
+  sourceSessionId String?
+  createdAt       DateTime          @default(now())
+}
+
+model SafetyPolicy {
+  id                 String   @id @default(cuid())
+  child              Child    @relation(fields: [childId], references: [id])
+  childId            String   @unique
+  ageRating          String?
+  blockedKeywords    Json?
+  allowedTopics      Json?
+  disallowedTopics   Json?
+  customInstructions String?
+  dailyMinutesMax    Int?
+  quietStartMin      Int?
+  quietEndMin        Int?
+  cloudVersion       Int      @default(1)
+  deviceVersion      Int      @default(0)
+  updatedAt          DateTime @updatedAt
+}
+
+model ScheduleRule {
+  id        String @id @default(cuid())
+  child     Child  @relation(fields: [childId], references: [id])
+  childId   String
+  dayOfWeek Int
+  startMin  Int
+  endMin    Int
+
+  @@index([childId, dayOfWeek, startMin])
+}
+
+model Device {
+  id              String        @id
+  ownerId         String
+  owner           User          @relation(fields: [ownerId], references: [id])
+  childId         String?
+  child           Child?        @relation(fields: [childId], references: [id])
+  displayName     String?
+  tpuPresent      Boolean       @default(true)
+  hardwareProfile Json?
+  firmwareVersion String?
+  policyVersion   Int           @default(0)
+  lastSeen        DateTime?
+  batteryPct      Int?
+  playTimeMin     Int           @default(0)
+  adventuresCount Int           @default(0)
+  status          String?
+  events          DeviceEvent[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([ownerId])
+  @@index([childId])
+  @@index([lastSeen])
+}
+
+model DeviceEvent {
+  id        String   @id @default(cuid())
+  device    Device   @relation(fields: [deviceId], references: [id])
+  deviceId  String
+  type      String
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, createdAt])
+}
+
+model ParentChatSession {
+  id        String              @id @default(cuid())
+  parent    User                @relation(fields: [parentId], references: [id])
+  parentId  String
+  startedAt DateTime            @default(now())
+  messages  ParentChatMessage[]
+}
+
+model ParentChatMessage {
+  id        String            @id @default(cuid())
+  session   ParentChatSession @relation(fields: [sessionId], references: [id])
+  sessionId String
+  role      CoachRole
+  content   String
+  createdAt DateTime          @default(now())
+}
