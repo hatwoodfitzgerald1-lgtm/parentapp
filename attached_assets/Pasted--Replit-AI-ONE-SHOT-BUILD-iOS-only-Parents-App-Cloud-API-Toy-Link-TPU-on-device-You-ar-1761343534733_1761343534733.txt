@@ -1,0 +1,520 @@
+🚀 Replit AI — ONE‑SHOT BUILD (iOS‑only): Parents App + Cloud API + Toy Link (TPU on‑device)
+
+You are a principal engineer. In ONE SHOT, generate a production‑ready iOS app (React Native + Expo Dev Client) and a Node/Express API for the Parents App that connects to our AI Toy (local TPU on the device). Do not ask questions. Apply advanced software engineering practices. At the end, print: final directory tree, exact run commands, seed logins, and a success checklist.
+
+0) Scope & Non‑Goals
+
+This repo is ONLY the Parents App + Cloud API.
+
+The toy software (SBC runtime with TPU + ESP32 firmware) is a separate project; here we include a toy simulator so everything works without real hardware.
+
+Platform: iOS only (no Android). BLE works only on a physical iPhone (documented); app must still run on iOS Simulator with pairing UI disabled and a clear message.
+
+1) Monorepo layout (npm workspaces)
+/parents-app-ios/
+  package.json           # workspaces + scripts
+  .env.example
+  .gitignore
+  README.md
+
+  /apps
+    /ios-mobile          # Expo React Native (iOS)
+    /server              # Node 20 + Express + Prisma
+
+  /packages
+    /shared              # shared TS types, Zod schemas, JSON Schemas
+    /toy-simulator       # MQTT + WS + REST toy simulator (dev-only)
+
+
+Root scripts
+
+postinstall: install all + prisma generate
+
+dev: run server, simulator, and print iOS run steps
+
+test: run all tests
+
+lint, typecheck
+
+Use npm workspaces (fall back to plain npm if workspaces unsupported).
+
+2) Environment (.env.example) — create exactly
+# Server
+DATABASE_URL="file:./apps/server/prisma/dev.db"
+JWT_SECRET="change-me"
+PORT=3001
+CORS_ORIGIN="http://localhost:5173"        # dev web tools; mobile uses RN fetch
+WEBSOCKET_ORIGIN="http://localhost:5173"
+
+# IoT bridge
+MQTT_BROKER_URL="mqtt://localhost:1883"    # dev: in-process broker auto-starts if unreachable
+MQTT_TOPIC_PREFIX="toy"
+
+# Policy signing (Ed25519)
+EDGE_POLICY_SIGN_SECRET=""                  # dev: if empty, generate temp on boot and print
+EDGE_POLICY_SIGN_PUBLIC=""
+
+# Simulator
+DEVICE_SIMULATOR=1
+
+3) Backend (apps/server) — Node/Express/TypeScript/Prisma
+
+Tech: Node 20, TS strict, Express, Prisma (SQLite dev, Postgres‑ready), Zod, Helmet, CORS allowlist, express‑rate‑limit, bcrypt, jsonwebtoken, morgan (dev), pino/winston, mqtt, aedes (dev broker), socket.io, tweetnacl (Ed25519).
+
+Architecture
+
+Layered: routes → services → repositories (Prisma).
+
+RBAC middleware (ADMIN, PARENT) and ownership guards on child/device access.
+
+Tokens: access + refresh (Bearer) for mobile (store in SecureStore on device). Rotate on refresh; blacklist revoked tokens (in‑memory dev, pluggable store).
+
+Validation: Zod schemas for all request bodies and query params.
+
+Security: Helmet, strict CORS (env allowlist), rate limits (e.g., 100/15m per IP), no PII in logs.
+
+Prisma schema — create/append exactly in apps/server/prisma/schema.prisma
+
+datasource db { provider = "sqlite"; url = env("DATABASE_URL") }
+generator client { provider = "prisma-client-js" }
+
+enum Role { ADMIN PARENT }
+enum ChatRole { CHILD ASSISTANT PARENT SYSTEM }
+enum CoachRole { PARENT ASSISTANT SYSTEM }
+enum HighlightCategory { Curiosity Creativity SocialSkills Emotions Learning Other }
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  role           Role     @default(PARENT)
+  firstName      String
+  lastName       String
+  createdAt      DateTime @default(now())
+  children       ParentChild[]
+  coachSessions  ParentChatSession[]
+}
+
+model Child {
+  id         String   @id @default(cuid())
+  firstName  String
+  lastName   String
+  birthday   DateTime?
+  className  String?
+  photoUrl   String?
+  parents    ParentChild[]
+  createdAt  DateTime @default(now())
+  policy     SafetyPolicy?
+}
+
+model ParentChild {
+  parentId String
+  childId  String
+  parent   User   @relation(fields: [parentId], references: [id])
+  child    Child  @relation(fields: [childId], references: [id])
+  @@id([parentId, childId])
+}
+
+model ChildChatSession {
+  id        String   @id @default(cuid())
+  child     Child    @relation(fields: [childId], references: [id])
+  childId   String
+  source    String?   // "toy" | "mobile" | "web"
+  deviceId  String?
+  startedAt DateTime @default(now())
+  messages  ChildChatMessage[]
+  @@index([childId, startedAt])
+}
+
+model ChildChatMessage {
+  id         String   @id @default(cuid())
+  session    ChildChatSession @relation(fields: [sessionId], references: [id])
+  sessionId  String
+  role       ChatRole
+  content    String
+  createdAt  DateTime  @default(now())
+  tokens     Int?
+  topicTags  Json?
+  safetyHits Json?
+  @@index([sessionId, createdAt])
+}
+
+model Highlight {
+  id          String   @id @default(cuid())
+  child       Child    @relation(fields: [childId], references: [id])
+  childId     String
+  title       String
+  summary     String
+  category    HighlightCategory
+  occurredAt  DateTime
+  sourceSessionId String?
+  createdAt   DateTime @default(now())
+}
+
+model SafetyPolicy {
+  id                 String  @id @default(cuid())
+  child              Child   @relation(fields: [childId], references: [id])
+  childId            String  @unique
+  ageRating          String?        // "G" | "PG" | "PG13"
+  blockedKeywords    Json?          // string[]
+  allowedTopics      Json?          // string[]
+  disallowedTopics   Json?          // string[]
+  customInstructions String?
+  dailyMinutesMax    Int?
+  quietStartMin      Int?           // minutes since midnight
+  quietEndMin        Int?
+  cloudVersion       Int     @default(1)
+  deviceVersion      Int     @default(0)
+  updatedAt          DateTime @updatedAt
+}
+
+model ScheduleRule {
+  id        String  @id @default(cuid())
+  child     Child   @relation(fields: [childId], references: [id])
+  childId   String
+  dayOfWeek Int     // 0-6
+  startMin  Int
+  endMin    Int
+  @@index([childId, dayOfWeek, startMin])
+}
+
+model Device {
+  id              String   @id           // deviceId
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id])
+  childId         String?
+  child           Child?   @relation(fields: [childId], references: [id])
+  displayName     String?
+  tpuPresent      Boolean  @default(true)
+  hardwareProfile Json?
+  firmwareVersion String?
+  policyVersion   Int      @default(0)
+  lastSeen        DateTime?
+  batteryPct      Int?
+  playTimeMin     Int      @default(0)
+  adventuresCount Int      @default(0)
+  status          String?
+  events          DeviceEvent[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([ownerId])
+  @@index([childId])
+  @@index([lastSeen])
+}
+
+model DeviceEvent {
+  id        String   @id @default(cuid())
+  device    Device   @relation(fields: [deviceId], references: [id])
+  deviceId  String
+  type      String   // "telemetry" | "state" | "chat" | "policy_ack" | "cmd_ack"
+  payload   Json
+  createdAt DateTime @default(now())
+  @@index([deviceId, createdAt])
+}
+
+
+IoT Bridge
+
+server/src/iot/broker.ts — start in‑process Aedes broker on 1883 (and optional WS on 8083) only if MQTT_BROKER_URL is localhost and unreachable.
+
+server/src/iot/mqttClient.ts — resilient MQTT client (auto‑reconnect), subscribes to toy/+/+ topics.
+
+server/src/iot/topics.ts — build/parse topic helpers.
+
+Topics (JSON payloads)
+
+Toy → Cloud
+
+toy/{deviceId}/state → { status, fwVersion, tpuPresent, batteryPct, childId, lastSeen }
+
+toy/{deviceId}/telemetry → { playTimeMin, adventuresCount }
+
+toy/{deviceId}/events/chat → { sessionId, childId, role, content, ts, tokens?, topicTags?, safetyHits? }
+
+toy/{deviceId}/policy/ack → { policyVersion, ok, appliedAt }
+
+Cloud → Toy
+
+toy/{deviceId}/policy/apply → Edge Policy (signed)
+
+toy/{deviceId}/cmd → { id, type: "ping"|"say"|"reboot"|"ota_check", args:{} }
+
+Edge Policy (signed JSON)
+
+Merge SafetyPolicy + ScheduleRule →
+
+type EdgePolicy = {
+  schemaVersion: 1
+  version: number
+  deviceId: string
+  childId: string
+  ageRating: "G"|"PG"|"PG13"
+  blockedKeywords: string[]
+  allowedTopics?: string[]
+  disallowedTopics?: string[]
+  quietHours?: { startMin: number; endMin: number }
+  dailyMinutesMax?: number
+  customInstructions?: string
+  issuedAt: string
+  signature?: { alg:"Ed25519"; keyId?:string; sigBase64:string }
+}
+
+
+server/src/iot/policySigner.ts — tweetnacl sign/verify; generate temp keys if env empty (print public key).
+
+Realtime
+
+server/src/realtime/ws.ts — Socket.IO /realtime; auth via access token; rooms user:{userId} and device:{deviceId}; emits device:update, conversation:update, highlight:new.
+
+Routes (/api, Zod‑validated, RBAC enforced)
+
+Auth: POST /auth/register, POST /auth/login, POST /auth/refresh, POST /auth/logout, GET /auth/me
+
+Children: GET /children, GET /children/:id, PUT /children/:id
+
+Conversations:
+
+POST /conversations/:childId/sessions
+
+GET /conversations/:childId/sessions
+
+GET /conversations/:childId/sessions/:sid/messages
+
+POST /conversations/:childId/sessions/:sid/messages
+
+GET /conversations/search?childId=&q=&from=&to=&role=
+
+Exports: GET /export/child/:childId/conversations.(json|csv)
+
+Highlights: GET /highlights?childId=, POST /highlights (ADMIN)
+
+Guardrails:
+
+GET /children/:childId/guardrails
+
+PUT /children/:childId/guardrails (merge, bump cloudVersion)
+
+GET /children/:childId/effective-policy
+
+Devices:
+
+POST /devices/pair (claim device to parent; optional link to childId)
+
+GET /devices
+
+GET /devices/:deviceId
+
+POST /devices/:deviceId/commands
+
+POST /devices/:deviceId/policy/push (compile + sign + publish)
+
+GET /devices/:deviceId/health
+
+GET /devices/:deviceId/export/events.csv
+
+Seed data (apps/server/prisma/seed.ts)
+
+Admin: admin@demo.com / Admin123!
+
+Parent: parent1@demo.com / Parent123!
+
+Two children (linked to parent1)
+
+One device toy-demo-001 (TPU present, fw 1.0.0, initial telemetry)
+
+One conversation session with ~6 messages + one Highlight
+
+Default guardrails: G, blockedKeywords=["violence","location","phone number"], dailyMinutesMax=45, quietHours 20:00–07:00
+
+Logging & privacy
+
+morgan (dev), pino/winston structured logs (info/error).
+
+Never log JWT, PII, or message content.
+
+No persistence of raw audio; only text events.
+
+4) iOS App (apps/ios‑mobile) — Expo React Native
+
+Tech: RN 0.74+, Expo Dev Client, TypeScript, React Navigation (tabs + stack), @tanstack/react‑query, Zustand, Zod, axios, expo‑secure‑store, expo‑notifications, react‑native‑ble‑plx (config plugin), react‑native‑mdns (or suitable alternative), socket.io‑client, nativewind.
+
+Permissions & config (app.config.ts)
+
+NSBluetoothAlwaysUsageDescription
+
+NSBluetoothPeripheralUsageDescription
+
+NSLocalNetworkUsageDescription
+
+NSCameraUsageDescription (QR)
+
+NSPhotoLibraryAddUsageDescription
+
+Notifications (Expo)
+
+Auth
+
+Access + refresh (Bearer). Store in SecureStore; auto‑refresh; revoke on logout.
+
+Interceptor refresh logic; exponential backoff; lock to avoid token stampede.
+
+BLE pairing (physical iPhone only)
+
+Service UUID 0xA17A (“AI Toy Pairing”).
+
+Characteristics:
+
+A17A-0001 Pairing Request (write): { parentPubKey, nonce }
+
+A17A-0002 Pairing Response (notify): { toyPubKey, signature }
+
+A17A-0004 Device Info (read): { fwVersion, hwRev, tpuOk, batteryPct }
+
+ECDH derive session key; store toy pubkey hash for TLS pinning.
+
+UI gracefully disables pairing on iOS Simulator with a helpful message.
+
+Local discovery
+
+mDNS _aitoy._tcp.local → https://aitoy.local:7443
+
+TLS public‑key pinning using pubkey captured in BLE pairing.
+
+State & data
+
+React Query for server state; optimistic updates for chat + guardrails; cache invalidation on mutations.
+
+Zustand slices: session, deviceShadow, guardrails.
+
+Never persist conversation history to AsyncStorage; export on demand only.
+
+Screens (must ship)
+
+Auth: Login/Register
+
+Dashboard: “Highlights for you”, Device card (Battery/Play/Adventures), quick links
+
+Children: list, detail
+
+Chat History: sessions list, message viewer, search/filter, Export CSV/JSON
+
+Highlights: feed with category pills; “See Chat”
+
+Guardrails: blocked keywords, allowed/disallowed topics, age rating, daily minutes, quiet hours, custom instructions; Effective Policy Preview; Sync to Toy
+
+Coach Chat: persistent sessions (parent↔assistant stub), typing indicator, optimistic send
+
+Device: battery %, play time, adventures, firmware, TPU present, last seen; actions: Sync Policy, Ping, Open Chat
+
+Pair Device: BLE flow (real device only); fallback note on Simulator
+
+Design polish
+
+Nativewind/Tailwind utilities; accessible color contrast; large tap targets; skeletons; toasts.
+
+Bottom tab nav: Home, History, Guardrails, Coach, Device, Settings.
+
+5) Toy Simulator (packages/toy‑simulator)
+
+Node script: connects to MQTT_BROKER_URL; publishes state and telemetry; listens for policy/apply (verifies signature if pubkey provided) → sends policy/ack; emits a demo chat of ~6 messages on events/chat.
+
+CLI: npm run sim:device -- --deviceId toy-demo-001
+
+Includes self‑signed local HTTPS stub (optional) and a WS echo (for completeness).
+
+6) Shared contracts (packages/shared)
+
+TypeScript types for MQTT payloads, EdgePolicy, conversations, highlights.
+
+Zod schemas and JSON Schemas (exported) for validation on both server and simulator.
+
+Include test vectors: valid policy JSON + signature pair, and invalid signature case.
+
+7) Testing & Quality
+
+Server: Vitest + Supertest
+
+Auth & RBAC
+
+MQTT ingest → DB upserts for state, telemetry, events/chat
+
+Policy compile + Ed25519 sign + publish; handle policy/ack
+
+Export endpoints (JSON/CSV)
+
+Mobile: React Native Testing Library
+
+Guardrails form validation & save flow (optimistic + error rollback)
+
+Coach chat send (optimistic; disabled when offline)
+
+Reducers/selectors (Zustand slices)
+
+E2E smoke (Maestro YAML): login → see simulator device → sync policy → receive ack → highlights visible → export CSV
+
+Tooling: ESLint + Prettier, TS strict, Husky pre‑commit (lint + typecheck + tests)
+
+8) README (root) — must include
+
+What’s included (iOS app + Cloud API + Toy Simulator; real toy software is separate).
+
+Prereqs: Node 20, npm, Xcode, CocoaPods, Expo CLI.
+
+Setup & run
+
+npm install
+npx prisma migrate dev --schema apps/server/prisma/schema.prisma
+npm --prefix apps/server run seed
+npm run dev           # starts server + simulator (see logs)
+# New terminal (iOS):
+cd apps/ios-mobile
+expo prebuild
+npx pod-install
+expo run:ios          # real device for BLE; Simulator ok for non-BLE
+
+
+Seed logins:
+
+Admin: admin@demo.com
+ / Admin123!
+
+Parent: parent1@demo.com
+ / Parent123!
+
+iOS notes: BLE works on real device only; Simulator shows pairing disabled message.
+
+Security: tokens in SecureStore; signed policies; TLS pinning; no local caching of conversations.
+
+Success checklist (below).
+
+Future work: link to separate Toy Runtime (SBC+TPU) and ESP32 firmware repos.
+
+9) Output requirements (print at the end)
+
+Concise directory tree
+
+Exact iOS run commands (see README)
+
+Seed logins
+
+Success checklist:
+
+iOS app builds/launches (Dev Client)
+
+Login works
+
+Device toy-demo-001 appears with live battery/play/adventures
+
+Sync to Toy pushes signed policy → policy/ack received
+
+Conversation messages stream into Chat History
+
+Highlights render and link to context
+
+Exports (CSV/JSON) download correctly
+
+npm run test passes
+
+Implement now. Output only file changes and README summary—no extra chatter.
+
+If you later want the toy runtime and ESP32 firmware one‑shot prompts, say “make the toy repos” and I’ll generate those too.
