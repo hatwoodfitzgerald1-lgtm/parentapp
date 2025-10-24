@@ -12,16 +12,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Server"
+args = "Setup Instructions"
 
 [[workflows.workflow]]
-name = "Server"
+name = "Setup Instructions"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd apps/server && DATABASE_URL=\"file:./prisma/dev.db\" npm run dev"
-waitForPort = 3001
+args = "echo \"📱 Parents App - iOS Mobile + Cloud API\" && echo \"\" && echo \"⚠️  This project requires local setup due to monorepo structure.\" && echo \"\" && echo \"📋 To run:\" && echo \"  1. Clone repository to local machine\" && echo \"  2. Run: npm install\" && echo \"  3. Run: cd apps/server && npx prisma generate && npx prisma migrate dev\" && echo \"  4. Run: cd apps/server && npm run dev (server)\" && echo \"  5. Run: cd apps/ios-mobile && npx expo run:ios (iOS app)\" && echo \"\" && echo \"📖 See SETUP_AND_RUN.md for complete instructions\" && echo \"🔑 Demo login: parent1@demo.com / Parent123!\" && sleep infinity"
 
 [workflows.workflow.metadata]
 outputType = "console"
@@ -29,3 +28,6 @@ outputType = "console"
 [[ports]]
 localPort = 3001
 externalPort = 3001
+
+[nix]
+channel = "stable-25_05"
