@@ -91,8 +91,8 @@ async function main() {
     create: {
       childId: child1.id,
       ageRating: 'G',
-      blockedKeywords: ['violence', 'location', 'phone number'],
-      allowedTopics: ['science', 'art', 'nature', 'animals'],
+      blockedKeywords: JSON.stringify(['violence', 'location', 'phone number']),
+      allowedTopics: JSON.stringify(['science', 'art', 'nature', 'animals']),
       dailyMinutesMax: 45,
       quietStartMin: 20 * 60,
       quietEndMin: 7 * 60,
@@ -107,7 +107,7 @@ async function main() {
     create: {
       childId: child2.id,
       ageRating: 'G',
-      blockedKeywords: ['violence', 'location', 'phone number'],
+      blockedKeywords: JSON.stringify(['violence', 'location', 'phone number']),
       dailyMinutesMax: 30,
       quietStartMin: 19 * 60,
       quietEndMin: 7 * 60,
@@ -161,7 +161,7 @@ async function main() {
         content: msg.content,
         createdAt: new Date(session.startedAt.getTime() + msg.offset * 1000),
         tokens: msg.content.split(' ').length * 1.3,
-        topicTags: ['dinosaurs', 'science', 'animals'],
+        topicTags: JSON.stringify(['dinosaurs', 'science', 'animals']),
       },
     });
   }
