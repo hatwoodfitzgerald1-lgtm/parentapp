@@ -1,0 +1,79 @@
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % command -v nvm
+nvm
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % nvm install --lts
+Installing latest LTS version.
+Downloading and installing node v22.21.0...
+Downloading https://nodejs.org/dist/v22.21.0/node-v22.21.0-darwin-arm64.tar.xz...
+######################################################################### 100.0%
+Computing checksum with sha256sum
+Checksums matched!
+Now using node v22.21.0 (npm v10.9.4)
+Creating default alias: default -> lts/* (-> v22.21.0)
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % node -v
+v22.21.0
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % npm -v
+10.9.4
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % git clone one-shot-build-hatwoodfitzgera.replit.app
+fatal: repository 'one-shot-build-hatwoodfitzgera.replit.app' does not exist
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % git clone https://github.com/hatwoodfitzgerald1-lgtm/parentapp.git
+Cloning into 'parentapp'...
+remote: Enumerating objects: 104, done.
+remote: Counting objects: 100% (104/104), done.
+remote: Compressing objects: 100% (70/70), done.
+remote: Total 104 (delta 20), reused 104 (delta 20), pack-reused 0 (from 0)
+Receiving objects: 100% (104/104), 128.82 KiB | 3.07 MiB/s, done.
+Resolving deltas: 100% (20/20), done.
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro ~ % cd parentapp
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro parentapp % npm install
+npm warn deprecated supertest@6.3.4: Please upgrade to supertest v7.1.3+, see release notes at https://github.com/forwardemail/supertest/releases/tag/v7.1.3 - maintenance is supported by Forward Email @ https://forwardemail.net
+npm warn deprecated glob@7.1.6: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.1.6: Glob versions prior to v9 are no longer supported
+npm warn deprecated glob@7.1.6: Glob versions prior to v9 are no longer supported
+npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+npm error code 1
+npm error path /Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/bcrypt
+npm error command failed
+npm error command sh -c node-pre-gyp install --fallback-to-build
+npm error node:internal/modules/cjs/loader:1386
+npm error   throw err;
+npm error   ^
+npm error
+npm error Error: Cannot find module 'readable-stream'
+npm error Require stack:
+npm error - /Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/tracker-stream.js
+npm error - /Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/tracker-group.js
+npm error - /Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/index.js
+npm error - /Users/harlematwood-fitzgerald/parentapp/node_modules/npmlog/log.js
+npm error - /Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/@mapbox/node-pre-gyp/lib/node-pre-gyp.js
+npm error - /Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/@mapbox/node-pre-gyp/lib/main.js
+npm error - /Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/@mapbox/node-pre-gyp/bin/node-pre-gyp
+npm error     at Function._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+npm error     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+npm error     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+npm error     at Function._load (node:internal/modules/cjs/loader:1192:37)
+npm error     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+npm error     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+npm error     at Module.require (node:internal/modules/cjs/loader:1463:12)
+npm error     at require (node:internal/modules/helpers:147:16)
+npm error     at Object.<anonymous> (/Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/tracker-stream.js:3:14)
+npm error     at Module._compile (node:internal/modules/cjs/loader:1706:14) {
+npm error   code: 'MODULE_NOT_FOUND',
+npm error   requireStack: [
+npm error     '/Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/tracker-stream.js',
+npm error     '/Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/tracker-group.js',
+npm error     '/Users/harlematwood-fitzgerald/parentapp/node_modules/are-we-there-yet/lib/index.js',
+npm error     '/Users/harlematwood-fitzgerald/parentapp/node_modules/npmlog/log.js',
+npm error     '/Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/@mapbox/node-pre-gyp/lib/node-pre-gyp.js',
+npm error     '/Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/@mapbox/node-pre-gyp/lib/main.js',
+npm error     '/Users/harlematwood-fitzgerald/parentapp/apps/server/node_modules/@mapbox/node-pre-gyp/bin/node-pre-gyp'
+npm error   ]
+npm error }
+npm error
+npm error Node.js v22.21.0
+npm notice
+npm notice New major version of npm available! 10.9.4 -> 11.6.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+npm notice To update run: npm install -g npm@11.6.2
+npm notice
+npm error A complete log of this run can be found in: /Users/harlematwood-fitzgerald/.npm/_logs/2025-10-25T00_16_47_101Z-debug-0.log
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro parentapp % 
