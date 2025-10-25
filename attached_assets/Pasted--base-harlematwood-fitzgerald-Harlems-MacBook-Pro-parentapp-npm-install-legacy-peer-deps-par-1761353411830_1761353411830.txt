@@ -1,0 +1,114 @@
+(base) harlematwood-fitzgerald@Harlems-MacBook-Pro parentapp % npm install --legacy-peer-deps
+
+> parents-app-ios@1.0.0 postinstall
+> npm run prisma:generate
+
+
+> parents-app-ios@1.0.0 prisma:generate
+> prisma generate --schema=./apps/server/prisma/schema.prisma
+
+Prisma schema loaded from apps/server/prisma/schema.prisma
+Error: Prisma schema validation - (get-dmmf wasm)
+Error code: P1012
+error: Error validating field `topicTags` in model `ChildChatMessage`: Field `topicTags` in model `ChildChatMessage` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:95
+   | 
+94 |   tokens     Int?
+95 |   topicTags  Json?
+96 |   safetyHits Json?
+   | 
+error: Error validating field `safetyHits` in model `ChildChatMessage`: Field `safetyHits` in model `ChildChatMessage` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:96
+   | 
+95 |   topicTags  Json?
+96 |   safetyHits Json?
+97 | 
+   | 
+error: Error validating field `blockedKeywords` in model `SafetyPolicy`: Field `blockedKeywords` in model `SafetyPolicy` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:118
+   | 
+117 |   ageRating          String?
+118 |   blockedKeywords    Json?
+119 |   allowedTopics      Json?
+   | 
+error: Error validating field `allowedTopics` in model `SafetyPolicy`: Field `allowedTopics` in model `SafetyPolicy` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:119
+   | 
+118 |   blockedKeywords    Json?
+119 |   allowedTopics      Json?
+120 |   disallowedTopics   Json?
+   | 
+error: Error validating field `disallowedTopics` in model `SafetyPolicy`: Field `disallowedTopics` in model `SafetyPolicy` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:120
+   | 
+119 |   allowedTopics      Json?
+120 |   disallowedTopics   Json?
+121 |   customInstructions String?
+   | 
+error: Error validating field `hardwareProfile` in model `Device`: Field `hardwareProfile` in model `Device` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:149
+   | 
+148 |   tpuPresent      Boolean       @default(true)
+149 |   hardwareProfile Json?
+150 |   firmwareVersion String?
+   | 
+error: Error validating field `payload` in model `DeviceEvent`: Field `payload` in model `DeviceEvent` can't be of type Json. The current connector does not support the Json type.
+  -->  apps/server/prisma/schema.prisma:171
+   | 
+170 |   type      String
+171 |   payload   Json
+172 |   createdAt DateTime @default(now())
+   | 
+error: Error validating: You defined the enum `Role`. But the current connector does not support enums.
+  -->  apps/server/prisma/schema.prisma:10
+   | 
+ 9 | 
+10 | enum Role {
+11 |   ADMIN
+12 |   PARENT
+13 | }
+   | 
+error: Error validating: You defined the enum `ChatRole`. But the current connector does not support enums.
+  -->  apps/server/prisma/schema.prisma:15
+   | 
+14 | 
+15 | enum ChatRole {
+16 |   CHILD
+17 |   ASSISTANT
+18 |   PARENT
+19 |   SYSTEM
+20 | }
+   | 
+error: Error validating: You defined the enum `CoachRole`. But the current connector does not support enums.
+  -->  apps/server/prisma/schema.prisma:22
+   | 
+21 | 
+22 | enum CoachRole {
+23 |   PARENT
+24 |   ASSISTANT
+25 |   SYSTEM
+26 | }
+   | 
+error: Error validating: You defined the enum `HighlightCategory`. But the current connector does not support enums.
+  -->  apps/server/prisma/schema.prisma:28
+   | 
+27 | 
+28 | enum HighlightCategory {
+29 |   Curiosity
+30 |   Creativity
+31 |   SocialSkills
+32 |   Emotions
+33 |   Learning
+34 |   Other
+35 | }
+   | 
+
+Validation Error Count: 11
+[Context: getDmmf]
+
+Prisma CLI Version : 5.22.0
+npm error code 1
+npm error path /Users/harlematwood-fitzgerald/parentapp
+npm error command failed
+npm error command sh -c npm run prisma:generate
+npm error A complete log of this run can be found in: /Users/harlematwood-fitzgerald/.npm/_logs/2025-10-25T00_48_48_122Z-debug-0.log

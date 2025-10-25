@@ -7,38 +7,11 @@ generator client {
   provider = "prisma-client-js"
 }
 
-enum Role {
-  ADMIN
-  PARENT
-}
-
-enum ChatRole {
-  CHILD
-  ASSISTANT
-  PARENT
-  SYSTEM
-}
-
-enum CoachRole {
-  PARENT
-  ASSISTANT
-  SYSTEM
-}
-
-enum HighlightCategory {
-  Curiosity
-  Creativity
-  SocialSkills
-  Emotions
-  Learning
-  Other
-}
-
 model User {
   id             String          @id @default(cuid())
   email          String          @unique
   passwordHash   String
-  role           Role            @default(PARENT)
+  role           String          @default("PARENT")
   firstName      String
   lastName       String
   createdAt      DateTime        @default(now())
@@ -88,26 +61,26 @@ model ChildChatMessage {
   id         String           @id @default(cuid())
   session    ChildChatSession @relation(fields: [sessionId], references: [id])
   sessionId  String
-  role       ChatRole
+  role       String
   content    String
   createdAt  DateTime         @default(now())
   tokens     Int?
-  topicTags  Json?
-  safetyHits Json?
+  topicTags  String?
+  safetyHits String?
 
   @@index([sessionId, createdAt])
 }
 
 model Highlight {
-  id              String            @id @default(cuid())
-  child           Child             @relation(fields: [childId], references: [id])
+  id              String   @id @default(cuid())
+  child           Child    @relation(fields: [childId], references: [id])
   childId         String
   title           String
   summary         String
-  category        HighlightCategory
+  category        String
   occurredAt      DateTime
   sourceSessionId String?
-  createdAt       DateTime          @default(now())
+  createdAt       DateTime @default(now())
 }
 
 model SafetyPolicy {
@@ -115,9 +88,9 @@ model SafetyPolicy {
   child              Child    @relation(fields: [childId], references: [id])
   childId            String   @unique
   ageRating          String?
-  blockedKeywords    Json?
-  allowedTopics      Json?
-  disallowedTopics   Json?
+  blockedKeywords    String?
+  allowedTopics      String?
+  disallowedTopics   String?
   customInstructions String?
   dailyMinutesMax    Int?
   quietStartMin      Int?
@@ -146,7 +119,7 @@ model Device {
   child           Child?        @relation(fields: [childId], references: [id])
   displayName     String?
   tpuPresent      Boolean       @default(true)
-  hardwareProfile Json?
+  hardwareProfile String?
   firmwareVersion String?
   policyVersion   Int           @default(0)
   lastSeen        DateTime?
@@ -168,7 +141,7 @@ model DeviceEvent {
   device    Device   @relation(fields: [deviceId], references: [id])
   deviceId  String
   type      String
-  payload   Json
+  payload   String
   createdAt DateTime @default(now())
 
   @@index([deviceId, createdAt])
@@ -186,7 +159,7 @@ model ParentChatMessage {
   id        String            @id @default(cuid())
   session   ParentChatSession @relation(fields: [sessionId], references: [id])
   sessionId String
-  role      CoachRole
+  role      String
   content   String
   createdAt DateTime          @default(now())
 }
